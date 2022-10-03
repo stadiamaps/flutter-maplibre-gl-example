@@ -77,8 +77,8 @@ class MapState extends State<Map> {
     await addClusteredPointLayers(sourceId);
   }
 
-  // I'm actually not totally sure why this only works for the cluster circles,
-  // but note that this logic only applies to interactions with those.
+  // Logic for interacting with clusters on iOS.
+  // See bug report: https://github.com/m0nac0/flutter-maplibre-gl/issues/160
   void _onFeatureTapped(
       dynamic featureId, Point<double> point, LatLng coords) async {
     var features =
@@ -93,7 +93,8 @@ class MapState extends State<Map> {
     }
   }
 
-  // This method handles interaction with the actual earthquake points.
+  // This method handles interaction with the actual earthquake points on iOS.
+  // See bug report: https://github.com/m0nac0/flutter-maplibre-gl/issues/160
   void _onMapClick(Point<double> point, LatLng coordinates) async {
     var messenger = ScaffoldMessenger.of(context);
     var color = Theme.of(context).primaryColor;

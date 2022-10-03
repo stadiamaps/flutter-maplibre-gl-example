@@ -26,3 +26,6 @@ samples, guidance on mobile development, and a full API reference.
 There appear to be a few issues/inconsistencies between web and mobile. This repo is
 currently tested against iOS and will have some quirks on Android and web as a result.
 We have opened issues with the library to resolve these.
+
+* https://github.com/m0nac0/flutter-maplibre-gl/issues/159
+* https://github.com/m0nac0/flutter-maplibre-gl/issues/160
