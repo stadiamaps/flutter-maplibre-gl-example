@@ -1,11 +1,16 @@
 import 'dart:collection';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:maplibre_gl/mapbox_gl.dart';
 
+import 'package:maplibre_gl/mapbox_gl.dart' as maplibre_gl;
+
 // FIXME: Be sure to set your own API key here. You can register for a free one at https://client.stadiamaps.com/.
 const apiKey = "YOUR-API-KEY";
+
+enum OfflineDataState { unknown, downloaded, downloading, notDownloaded }
 
 class MapPage extends StatelessWidget {
   const MapPage({super.key});
@@ -28,6 +33,9 @@ class MapState extends State<Map> {
   static const clusterLayer = "clusters";
   static const unclusteredPointLayer = "unclustered-point";
 
+  OfflineDataState offlineDataState = OfflineDataState.unknown;
+  double? downloadProgress;
+
   @override
   void dispose() {
     mapController?.onFeatureTapped.remove(_onFeatureTapped);
@@ -40,6 +48,18 @@ class MapState extends State<Map> {
     // Event listener that fires for the cluster layer (not due to an explicit
     // filter; only a consequence of the current mix of layers used).
     controller.onFeatureTapped.add(_onFeatureTapped);
+
+    // Determine if we have data stored offline. Note that this is a fairly
+    // crude check, and if you are dealing with multiple styles or regions,
+    // you will want to do something a bit more advanced.
+    final result = await getListOfRegions();
+    setState(() {
+      if (result.isEmpty) {
+        offlineDataState = OfflineDataState.notDownloaded;
+      } else {
+        offlineDataState = OfflineDataState.downloaded;
+      }
+    });
   }
 
   void _onStyleLoadedCallback() async {
@@ -166,17 +186,164 @@ class MapState extends State<Map> {
 
   @override
   Widget build(BuildContext context) {
+    final Widget child;
+    switch (offlineDataState) {
+      case OfflineDataState.downloaded:
+        child = const Icon(Icons.delete);
+        break;
+      case OfflineDataState.notDownloaded:
+        child = const Icon(Icons.download_for_offline_outlined);
+        break;
+      case OfflineDataState.downloading:
+      case OfflineDataState.unknown:
+        // Indeterminate progress indicator
+        child = CircularProgressIndicator(
+          value: downloadProgress,
+          color: Colors.white,
+        );
+        break;
+    }
+
+    final Widget? actionButton;
+    if (kIsWeb) {
+      // Offline tiles are not supported in the browser
+      actionButton = null;
+    } else {
+      actionButton =
+          FloatingActionButton(onPressed: _actionButtonPressed, child: child);
+    }
+
+    return Scaffold(
+      body: MaplibreMap(
+        styleString: _mapStyleUrl(),
+        myLocationEnabled: true,
+        initialCameraPosition: const CameraPosition(target: LatLng(0.0, 0.0)),
+        onMapCreated: _onMapCreated,
+        onStyleLoadedCallback: _onStyleLoadedCallback,
+        onMapClick: _onMapClick,
+        trackCameraPosition: true,
+      ),
+      floatingActionButton: actionButton,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+    );
+  }
+
+  String _mapStyleUrl() {
     const styleUrl =
         "https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json";
-    return Scaffold(
-        body: MaplibreMap(
-      styleString: "$styleUrl?api_key=$apiKey",
-      myLocationEnabled: true,
-      initialCameraPosition: const CameraPosition(target: LatLng(0.0, 0.0)),
-      onMapCreated: _onMapCreated,
-      onStyleLoadedCallback: _onStyleLoadedCallback,
-      onMapClick: _onMapClick,
-      trackCameraPosition: true,
-    ));
+    return "$styleUrl?api_key=$apiKey";
+  }
+
+  void _actionButtonPressed() async {
+    switch (offlineDataState) {
+      case OfflineDataState.downloaded:
+        _deleteOfflineRegion();
+        break;
+      case OfflineDataState.notDownloaded:
+        await _downloadOfflineRegion();
+        break;
+      case OfflineDataState.downloading:
+      case OfflineDataState.unknown:
+        return;
+    }
+  }
+
+  Future<OfflineRegion?> _downloadOfflineRegion() async {
+    setState(() {
+      offlineDataState = OfflineDataState.downloading;
+    });
+
+    try {
+      // Bounding box around Manhattan. Note that this will consume
+      // approximately 200 API credits.
+      final bounds = LatLngBounds(
+        southwest: const LatLng(40.69, -74.03),
+        northeast: const LatLng(40.84, -73.86),
+      );
+      final regionDefinition = OfflineRegionDefinition(
+          bounds: bounds, mapStyleUrl: _mapStyleUrl(), minZoom: 6, maxZoom: 14);
+      final region = await downloadOfflineRegion(regionDefinition, metadata: {
+        'name': 'Manhattan',
+      }, onEvent: (event) {
+        // Event listener for download progress; MapLibre uses a repeated
+        // callback API, and the download command, while async, completes early.
+        if (event is maplibre_gl.Success) {
+          setState(() {
+            offlineDataState = OfflineDataState.downloaded;
+            downloadProgress = null;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: const Text("Manhattan Downloaded for Offline Use"),
+            backgroundColor: Theme.of(context).primaryColor,
+            duration: const Duration(seconds: 3),
+          ));
+        } else if (event is maplibre_gl.Error) {
+          setState(() {
+            offlineDataState = OfflineDataState.notDownloaded;
+            downloadProgress = null;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: const Text("Data Downloaded Failed!"),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            duration: const Duration(seconds: 3),
+          ));
+        } else if (event is maplibre_gl.InProgress) {
+          setState(() {
+            offlineDataState = OfflineDataState.downloading;
+            downloadProgress = event.progress / 100;
+          });
+        }
+      });
+
+      return region;
+    } on Exception catch (_) {
+      setState(() {
+        offlineDataState = OfflineDataState.notDownloaded;
+        downloadProgress = null;
+      });
+      return null;
+    }
+  }
+
+  void _deleteOfflineRegion() async {
+    setState(() {
+      offlineDataState = OfflineDataState.unknown;
+    });
+
+    final regions = await getListOfRegions();
+
+    for (final region in regions) {
+      // NOTE: The term "delete" here is a bit of a misnomer. From the docs:
+      //
+      // When you remove an offline pack, any resources that are required by
+      // that pack, but not other packs, become eligible for deletion from
+      // offline storage. Because the backing store used for offline storage
+      // is also used as a general purpose cache for map resources, such
+      // resources may not be immediately removed if the implementation
+      // determines that they remain useful for general performance of the map.
+      //
+      // Ambient cache controls also exist, but these are not currently wrapped
+      // for Flutter. This is not normally an issue, and the storage engine will
+      // eventually clear these tiles out.
+      //
+      // Source: https://maplibre.org/maplibre-gl-native/ios/api/Classes/MGLOfflineStorage.html#/c:objc(cs)MGLOfflineStorage(im)removePack:withCompletionHandler:
+      await deleteOfflineRegion(
+        region.id,
+      );
+    }
+
+    setState(() {
+      offlineDataState = OfflineDataState.notDownloaded;
+    });
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Text("Offline data marked for removal"),
+        backgroundColor: Theme.of(context).primaryColor,
+        duration: const Duration(seconds: 1),
+      ));
+    }
   }
 }

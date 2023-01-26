@@ -1,7 +1,7 @@
 # flutter_maplibre_demo
 
 An example Flutter project demonstrating how to use the [MapLibre GL wrapper](https://github.com/m0nac0/flutter-maplibre-gl)
-with clustering.
+with annotation clustering and offline caching. (Note that offline management is only available on mobile platforms.)
 
 ## Getting Started
 
@@ -29,3 +29,8 @@ We have opened issues with the library to resolve these.
 
 * https://github.com/m0nac0/flutter-maplibre-gl/issues/159
 * https://github.com/m0nac0/flutter-maplibre-gl/issues/160
+
+Finally, note that iOS Simulator currently has some issues rendering maps due to rendering
+library issues, particularly on Apple Silicon. Reworking the rendering to use Metal is
+actively underway upstream, which will solve the simulator issues. For now, we recommend
+running on a device.
