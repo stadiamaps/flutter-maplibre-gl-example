@@ -262,40 +262,11 @@ class MapState extends State<Map> {
       );
       final regionDefinition = OfflineRegionDefinition(
           bounds: bounds, mapStyleUrl: _mapStyleUrl(), minZoom: 6, maxZoom: 14);
-      final region = await downloadOfflineRegion(regionDefinition, metadata: {
-        'name': 'Manhattan',
-      }, onEvent: (event) {
-        // Event listener for download progress; MapLibre uses a repeated
-        // callback API, and the download command, while async, completes early.
-        if (event is maplibre_gl.Success) {
-          setState(() {
-            offlineDataState = OfflineDataState.downloaded;
-            downloadProgress = null;
-          });
-
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: const Text("Manhattan Downloaded for Offline Use"),
-            backgroundColor: Theme.of(context).primaryColor,
-            duration: const Duration(seconds: 3),
-          ));
-        } else if (event is maplibre_gl.Error) {
-          setState(() {
-            offlineDataState = OfflineDataState.notDownloaded;
-            downloadProgress = null;
-          });
-
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: const Text("Data Downloaded Failed!"),
-            backgroundColor: Theme.of(context).colorScheme.error,
-            duration: const Duration(seconds: 3),
-          ));
-        } else if (event is maplibre_gl.InProgress) {
-          setState(() {
-            offlineDataState = OfflineDataState.downloading;
-            downloadProgress = event.progress / 100;
-          });
-        }
-      });
+      final region = await downloadOfflineRegion(regionDefinition,
+          metadata: {
+            'name': 'Manhattan',
+          },
+          onEvent: _onDownloadEvent);
 
       return region;
     } on Exception catch (_) {
@@ -304,6 +275,39 @@ class MapState extends State<Map> {
         downloadProgress = null;
       });
       return null;
+    }
+  }
+
+  void _onDownloadEvent(DownloadRegionStatus status) {
+    // Event listener for download progress; MapLibre uses a repeated
+    // callback API, and the download command, while async, completes early.
+    if (status is maplibre_gl.Success) {
+      setState(() {
+        offlineDataState = OfflineDataState.downloaded;
+        downloadProgress = null;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Text("Manhattan Downloaded for Offline Use"),
+        backgroundColor: Theme.of(context).primaryColor,
+        duration: const Duration(seconds: 3),
+      ));
+    } else if (status is maplibre_gl.Error) {
+      setState(() {
+        offlineDataState = OfflineDataState.notDownloaded;
+        downloadProgress = null;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Text("Data Downloaded Failed!"),
+        backgroundColor: Theme.of(context).colorScheme.error,
+        duration: const Duration(seconds: 3),
+      ));
+    } else if (status is maplibre_gl.InProgress) {
+      setState(() {
+        offlineDataState = OfflineDataState.downloading;
+        downloadProgress = status.progress / 100;
+      });
     }
   }
 
