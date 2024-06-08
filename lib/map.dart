@@ -3,9 +3,7 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:maplibre_gl/mapbox_gl.dart';
-
-import 'package:maplibre_gl/mapbox_gl.dart' as maplibre_gl;
+import 'package:maplibre_gl/maplibre_gl.dart';
 
 // FIXME: Be sure to set your own API key here. You can register for a free one at https://client.stadiamaps.com/.
 const apiKey = "YOUR-API-KEY";
@@ -29,7 +27,7 @@ class Map extends StatefulWidget {
 }
 
 class MapState extends State<Map> {
-  MaplibreMapController? mapController;
+  MapLibreMapController? mapController;
   static const clusterLayer = "clusters";
   static const unclusteredPointLayer = "unclustered-point";
 
@@ -42,7 +40,7 @@ class MapState extends State<Map> {
     super.dispose();
   }
 
-  void _onMapCreated(MaplibreMapController controller) async {
+  void _onMapCreated(MapLibreMapController controller) async {
     mapController = controller;
 
     // Event listener that fires for the cluster layer (not due to an explicit
@@ -93,7 +91,7 @@ class MapState extends State<Map> {
     //   ]
     // });
     await addClusteredPointSource(sourceId,
-        "https://maplibre.org/maplibre-gl-js-docs/assets/earthquakes.geojson");
+        "https://maplibre.org/maplibre-gl-js/docs/assets/earthquakes.geojson");
     await addClusteredPointLayers(sourceId);
   }
 
@@ -214,7 +212,7 @@ class MapState extends State<Map> {
     }
 
     return Scaffold(
-      body: MaplibreMap(
+      body: MapLibreMap(
         styleString: _mapStyleUrl(),
         myLocationEnabled: true,
         initialCameraPosition: const CameraPosition(target: LatLng(0.0, 0.0)),
@@ -261,7 +259,7 @@ class MapState extends State<Map> {
         northeast: const LatLng(40.84, -73.86),
       );
       final regionDefinition = OfflineRegionDefinition(
-          bounds: bounds, mapStyleUrl: _mapStyleUrl(), minZoom: 6, maxZoom: 14);
+          bounds: bounds, mapStyleUrl: _mapStyleUrl(), minZoom: 0, maxZoom: 14);
       final region = await downloadOfflineRegion(regionDefinition,
           metadata: {
             'name': 'Manhattan',
@@ -281,7 +279,7 @@ class MapState extends State<Map> {
   void _onDownloadEvent(DownloadRegionStatus status) {
     // Event listener for download progress; MapLibre uses a repeated
     // callback API, and the download command, while async, completes early.
-    if (status is maplibre_gl.Success) {
+    if (status is Success) {
       setState(() {
         offlineDataState = OfflineDataState.downloaded;
         downloadProgress = null;
@@ -292,7 +290,7 @@ class MapState extends State<Map> {
         backgroundColor: Theme.of(context).primaryColor,
         duration: const Duration(seconds: 3),
       ));
-    } else if (status is maplibre_gl.Error) {
+    } else if (status is Error) {
       setState(() {
         offlineDataState = OfflineDataState.notDownloaded;
         downloadProgress = null;
@@ -303,7 +301,7 @@ class MapState extends State<Map> {
         backgroundColor: Theme.of(context).colorScheme.error,
         duration: const Duration(seconds: 3),
       ));
-    } else if (status is maplibre_gl.InProgress) {
+    } else if (status is InProgress) {
       setState(() {
         offlineDataState = OfflineDataState.downloading;
         downloadProgress = status.progress / 100;
