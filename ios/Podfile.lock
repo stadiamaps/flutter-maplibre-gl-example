@@ -1,23 +1,17 @@
 PODS:
   - Flutter (1.0.0)
-  - MapLibre (5.12.2)
+  - MapLibre (6.5.0)
   - maplibre_gl (0.0.1):
     - Flutter
-    - MapLibre (~> 5.12.2)
-    - MapLibreAnnotationExtension (~> 0.0.1-beta.2)
-  - MapLibreAnnotationExtension (0.0.1-beta.2):
-    - MapLibre (~> 5.12.0)
+    - MapLibre (= 6.5.0)
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)
-  - MapLibre
   - maplibre_gl (from `.symlinks/plugins/maplibre_gl/ios`)
-  - MapLibreAnnotationExtension
 
 SPEC REPOS:
-  https://github.com/m0nac0/flutter-maplibre-podspecs.git:
+  trunk:
     - MapLibre
-    - MapLibreAnnotationExtension
 
 EXTERNAL SOURCES:
   Flutter:
@@ -26,11 +20,10 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/maplibre_gl/ios"
 
 SPEC CHECKSUMS:
-  Flutter: f04841e97a9d0b0a8025694d0796dd46242b2854
-  MapLibre: 5aa820115d91293a4d09e681e7470f88bd34b672
-  maplibre_gl: 2a0ce99f40b3a133b0e8b40b5ef37e0562165399
-  MapLibreAnnotationExtension: bc7f1041206218d7d24ba0908e3145cd54b86664
+  Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
+  MapLibre: 0ebfa9329d313cec8bf0a5ba5a336a1dc903785e
+  maplibre_gl: 943a491fffb3337c1b9de57fd377206d18c16e34
 
-PODFILE CHECKSUM: a9e7ef6e16ab2000ee3e21d45b38168f5048b524
+PODFILE CHECKSUM: 819463e6a0290f5a72f145ba7cde16e8b6ef0796
 
-COCOAPODS: 1.11.3
+COCOAPODS: 1.15.2
